@@ -32,6 +32,6 @@ export async function connectDB () {
     return global._mongoose.conn
   } catch (error) {
     console.error('❌ MongoDB connection failed:', error)
-    throw error // rethrow so calling code knows it failed
+    throw error 
   }
 }

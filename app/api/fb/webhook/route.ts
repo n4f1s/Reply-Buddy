@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import Shop from "@/models/Shop";
-import Conversation from "@/models/Conversation";
-import Message from "@/models/Message";
+import { handleFacebookWebhook } from "@/services/fbWebhookService";
 
 /**
  * Facebook Webhook Verification (GET)
@@ -30,57 +28,7 @@ export async function POST(req: NextRequest) {
     }
 
     await connectDB();
-
-    for (const entry of body.entry) {
-      const pageId = entry.id;
-      const messagingEvents = entry.messaging || [];
-      if (!messagingEvents.length) continue;
-
-      for (const m of messagingEvents) {
-        const senderId = m.sender?.id;
-        if (!senderId) continue;
-
-        const text =
-          m.message?.text ||
-          (m.message && JSON.stringify(m.message));
-
-        // find or create shop
-        let shop = await Shop.findOne({ fbPageId: pageId });
-        if (!shop) {
-          shop = await Shop.create({
-            fbPageId: pageId,
-            name: `FB Shop ${pageId}`,
-          });
-        }
-
-        // find or create conversation
-        let conversation = await Conversation.findOne({
-          shopId: shop._id,
-          userId: senderId,
-          channel: "facebook",
-        });
-        if (!conversation) {
-          conversation = await Conversation.create({
-            shopId: shop._id,
-            userId: senderId,
-            channel: "facebook",
-          });
-        } else {
-          conversation.lastActive = new Date();
-          await conversation.save();
-        }
-
-        // create message
-        if (text) {
-          await Message.create({
-            conversationId: conversation._id,
-            role: "user",
-            text: typeof text === "string" ? text : JSON.stringify(text),
-            raw: m,
-          });
-        }
-      }
-    }
+    await handleFacebookWebhook(body);
 
     return NextResponse.json({ received: true });
   } catch (err) {

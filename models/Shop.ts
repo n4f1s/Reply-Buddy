@@ -1,6 +1,7 @@
-import mongoose, { Document, Model, Schema } from "mongoose";
+import mongoose, { Document, Model, Schema, Types } from "mongoose";
 
-export interface IShop extends Document {
+export interface IShop extends Document<Types.ObjectId> {
+  _id: Types.ObjectId;  
   fbPageId?: string;
   pageAccessToken?: string;
   name: string;
@@ -22,5 +23,7 @@ const ShopSchema = new Schema<IShop>(
   { timestamps: true }
 );
 
-const Shop: Model<IShop> = mongoose.models.Shop || mongoose.model<IShop>("Shop", ShopSchema);
+const Shop: Model<IShop> =
+  mongoose.models.Shop || mongoose.model<IShop>("Shop", ShopSchema);
+
 export default Shop;

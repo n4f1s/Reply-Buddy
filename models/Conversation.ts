@@ -1,4 +1,3 @@
-// models/Conversation.ts
 import mongoose, { Document, Model, Schema } from "mongoose";
 
 export interface IConversation extends Document {
