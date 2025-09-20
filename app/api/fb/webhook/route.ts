@@ -11,9 +11,18 @@ export async function GET(req: NextRequest) {
   const token = url.searchParams.get("hub.verify_token");
   const challenge = url.searchParams.get("hub.challenge");
 
+  console.log("🔎 FB Webhook Verification Request:", {
+    mode,
+    token,
+    expected: process.env.FB_VERIFY_TOKEN,
+    challenge,
+  });
+
   if (mode === "subscribe" && token === process.env.FB_VERIFY_TOKEN) {
+    // Must echo back the challenge EXACTLY
     return new NextResponse(challenge || "ok", { status: 200 });
   }
+
   return new NextResponse("Forbidden", { status: 403 });
 }
 
@@ -23,6 +32,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
+    console.log("📩 FB Webhook Event:", JSON.stringify(body, null, 2));
+
     if (!body?.entry?.length) {
       return NextResponse.json({ ok: true });
     }
@@ -30,9 +41,10 @@ export async function POST(req: NextRequest) {
     await connectDB();
     await handleFacebookWebhook(body);
 
-    return NextResponse.json({ received: true });
+    // Respond fast so FB doesn't retry
+    return NextResponse.json({ received: true }, { status: 200 });
   } catch (err) {
-    console.error("FB Webhook POST error:", err);
+    console.error("❌ FB Webhook POST error:", err);
     return NextResponse.json({ error: "internal" }, { status: 500 });
   }
 }
