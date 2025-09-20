@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
-import { handleFacebookWebhook } from "@/services/fbWebhookService";
+import { handleFacebookWebhook, FBWebhookEvent } from "@/services/fbWebhookService";
 
 /**
  * Facebook Webhook Verification (GET)
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
+    const body: FBWebhookEvent = await req.json();
     console.log("📩 Incoming FB Webhook Event:", JSON.stringify(body, null, 2));
 
     if (!body?.entry?.length) {
@@ -49,8 +49,8 @@ export async function POST(req: NextRequest) {
 
     console.log("✅ Webhook event handled successfully.");
     return NextResponse.json({ received: true }, { status: 200 });
-  } catch (err: any) {
-    console.error("❌ FB Webhook POST error:", err?.message || err);
+  } catch (err: unknown) {
+    console.error("❌ FB Webhook POST error:", (err as Error).message || err);
     return NextResponse.json({ error: "internal" }, { status: 500 });
   }
 }

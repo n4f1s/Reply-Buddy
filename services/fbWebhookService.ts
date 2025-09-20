@@ -4,7 +4,23 @@ import Message from '@/models/Message';
 import { generateAIReply } from './aiService';
 import { sendFacebookMessage, sendTypingIndicator } from './fbSendService';
 
-export async function handleFacebookWebhook(body: any) {
+// Proper TypeScript type for FB webhook body
+export interface FBWebhookEvent {
+  entry: Array<{
+    id: string;
+    messaging?: Array<{
+      sender?: { id: string };
+      message?: {
+        mid?: string;
+        text?: string;
+        [key: string]: any;
+      };
+      id?: string;
+    }>;
+  }>;
+}
+
+export async function handleFacebookWebhook(body: FBWebhookEvent) {
   for (const entry of body.entry) {
     const pageId = entry.id;
     const messagingEvents = entry.messaging || [];
@@ -61,10 +77,7 @@ export async function handleFacebookWebhook(body: any) {
       const pageToken = shop.pageAccessToken || process.env.PAGE_ACCESS_TOKEN!;
       await sendTypingIndicator(pageToken, senderId);
 
-      // Random delay to simulate typing
-      // await new Promise((resolve) => setTimeout(resolve, 1000 + Math.random() * 1500));
-
-      // Check if AI already replied to this message
+      // Prevent duplicate AI reply
       const alreadyReplied = await Message.findOne({
         conversationId: conversation._id,
         role: 'bot',
@@ -74,16 +87,14 @@ export async function handleFacebookWebhook(body: any) {
       if (!alreadyReplied) {
         const reply = await generateAIReply(shop._id.toString(), text);
 
-        // Save AI reply
         await Message.create({
           conversationId: conversation._id,
           role: 'bot',
           text: reply,
           raw: {},
-          replyToMid: mid, // Proper reference to user message
+          replyToMid: mid,
         });
 
-        // Send AI reply to Facebook
         await sendFacebookMessage(pageToken, senderId, reply);
       }
     }
