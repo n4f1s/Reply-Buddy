@@ -19,10 +19,11 @@ export async function GET(req: NextRequest) {
   });
 
   if (mode === "subscribe" && token === process.env.FB_VERIFY_TOKEN) {
-    // Must echo back the challenge EXACTLY
+    console.log("✅ Webhook verified successfully.");
     return new NextResponse(challenge || "ok", { status: 200 });
   }
 
+  console.warn("⚠️ Webhook verification failed:", { mode, token });
   return new NextResponse("Forbidden", { status: 403 });
 }
 
@@ -32,19 +33,24 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    console.log("📩 FB Webhook Event:", JSON.stringify(body, null, 2));
+    console.log("📩 Incoming FB Webhook Event:", JSON.stringify(body, null, 2));
 
     if (!body?.entry?.length) {
+      console.warn("⚠️ No entry in FB webhook payload");
       return NextResponse.json({ ok: true });
     }
 
+    console.log("🔗 Connecting to MongoDB...");
     await connectDB();
+    console.log("✅ MongoDB connected.");
+
+    console.log("➡️ Passing event to fbWebhookService...");
     await handleFacebookWebhook(body);
 
-    // Respond fast so FB doesn't retry
+    console.log("✅ Webhook event handled successfully.");
     return NextResponse.json({ received: true }, { status: 200 });
-  } catch (err) {
-    console.error("❌ FB Webhook POST error:", err);
+  } catch (err: any) {
+    console.error("❌ FB Webhook POST error:", err?.message || err);
     return NextResponse.json({ error: "internal" }, { status: 500 });
   }
 }
